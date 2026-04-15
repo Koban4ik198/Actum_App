@@ -1,5 +1,6 @@
 package com.actum.backend.controller
 
+import com.actum.backend.dto.CancelTaskRequest
 import com.actum.backend.dto.CompleteTaskRequest
 import com.actum.backend.dto.CreateTaskRequest
 import com.actum.backend.dto.ReportResponse
@@ -10,6 +11,10 @@ import com.actum.backend.model.TaskStatus
 import com.actum.backend.repository.ReportRepository
 import com.actum.backend.repository.TaskRepository
 import com.actum.backend.repository.UserRepository
+import com.actum.backend.service.PdfService
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -17,7 +22,8 @@ import org.springframework.web.bind.annotation.*
 class TaskController(
     private val taskRepository: TaskRepository,
     private val userRepository: UserRepository,
-    private val reportRepository: ReportRepository
+    private val reportRepository: ReportRepository,
+    private val pdfService: PdfService
 ) {
 
     @PostMapping
@@ -108,6 +114,36 @@ class TaskController(
         )
     }
 
+    @PostMapping("/cancel")
+    fun cancelTask(@RequestBody request: CancelTaskRequest): TaskResponse {
+        val task = taskRepository.findById(request.taskId)
+            .orElseThrow { RuntimeException("Task not found") }
+
+        if (task.status != TaskStatus.IN_PROGRESS && task.status != TaskStatus.CREATED) {
+            throw RuntimeException("Task cannot be cancelled")
+        }
+
+        reportRepository.save(
+            Report(
+                task = task,
+                data = "{\"cancelReason\":\"${request.reason}\"}"
+            )
+        )
+
+        task.status = TaskStatus.CANCELLED
+        val updated = taskRepository.save(task)
+
+        return TaskResponse(
+            id = updated.id,
+            title = updated.title,
+            address = updated.address,
+            clientName = updated.clientName,
+            status = updated.status,
+            managerId = updated.manager.id,
+            specialistId = updated.specialist?.id
+        )
+    }
+
     @GetMapping("/{id}/report")
     fun getReport(@PathVariable id: Long): ReportResponse {
         val report = reportRepository.findByTask_Id(id)
@@ -117,6 +153,22 @@ class TaskController(
             taskId = report.task.id,
             data = report.data
         )
+    }
+
+    @GetMapping("/{id}/report/pdf")
+    fun downloadReportPdf(@PathVariable id: Long): ResponseEntity<ByteArray> {
+        val task = taskRepository.findById(id)
+            .orElseThrow { RuntimeException("Task not found") }
+
+        val report = reportRepository.findByTask_Id(id)
+            .orElseThrow { RuntimeException("Report not found") }
+
+        val pdfBytes = pdfService.generateTaskReportPdf(task, report)
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=task-report-$id.pdf")
+            .contentType(MediaType.APPLICATION_PDF)
+            .body(pdfBytes)
     }
 
     @GetMapping
