@@ -15,7 +15,7 @@ data class Report(
     @JoinColumn(name = "task_id")
     val task: Task,
 
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "TEXT")
     val data: String,
 
     val createdAt: LocalDateTime = LocalDateTime.now()

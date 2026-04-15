@@ -6,5 +6,5 @@ import java.util.*
 
 interface ReportRepository : JpaRepository<Report, Long> {
 
-    fun findByTaskId(taskId: Long): Optional<Report>
+    fun findByTask_Id(taskId: Long): Optional<Report>
 }
