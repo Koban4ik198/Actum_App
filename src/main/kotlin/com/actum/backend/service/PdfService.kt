@@ -44,68 +44,36 @@ class PdfService {
                 .setFontSize(16f)
         )
 
-        document.add(
-            Paragraph(" ")
-        )
-
-        document.add(
-            Paragraph("Данные заявки")
-                .setFont(boldFont)
-                .setFontSize(13f)
-        )
+        document.add(Paragraph(" "))
+        document.add(Paragraph("Данные заявки").setFont(boldFont).setFontSize(13f))
         document.add(Paragraph("ID заявки: ${task.id}").setFont(font))
         document.add(Paragraph("Название: ${task.title}").setFont(font))
         document.add(Paragraph("Адрес: ${task.address}").setFont(font))
         document.add(Paragraph("Клиент: ${task.clientName}").setFont(font))
         document.add(Paragraph("Статус: ${task.status}").setFont(font))
 
-        document.add(
-            Paragraph(" ")
-        )
-
-        document.add(
-            Paragraph("Ответственные")
-                .setFont(boldFont)
-                .setFontSize(13f)
-        )
+        document.add(Paragraph(" "))
+        document.add(Paragraph("Ответственные").setFont(boldFont).setFontSize(13f))
         document.add(Paragraph("Менеджер ID: ${task.manager.id}").setFont(font))
         document.add(Paragraph("Специалист ID: ${task.specialist?.id ?: "-"}").setFont(font))
 
-        document.add(
-            Paragraph(" ")
-        )
-
-        document.add(
-            Paragraph("Информация по отчёту")
-                .setFont(boldFont)
-                .setFontSize(13f)
-        )
+        document.add(Paragraph(" "))
+        document.add(Paragraph("Информация по отчёту").setFont(boldFont).setFontSize(13f))
         document.add(Paragraph("Дата создания: ${report.createdAt}").setFont(font))
 
-        document.add(
-            Paragraph(" ")
-        )
+        document.add(Paragraph(" "))
 
         if (task.status.name == "CANCELLED") {
-            document.add(
-                Paragraph("Причина отмены")
-                    .setFont(boldFont)
-                    .setFontSize(13f)
-            )
+            document.add(Paragraph("Причина отмены").setFont(boldFont).setFontSize(13f))
             document.add(Paragraph(cancelReason ?: "-").setFont(font))
         } else {
-            document.add(
-                Paragraph("Результат выполнения")
-                    .setFont(boldFont)
-                    .setFontSize(13f)
-            )
+            document.add(Paragraph("Результат выполнения").setFont(boldFont).setFontSize(13f))
             document.add(Paragraph("Что сделано: $workDone").setFont(font))
             document.add(Paragraph("Клиент: $client").setFont(font))
             document.add(Paragraph("Итог: $result").setFont(font))
         }
 
         document.close()
-
         return outputStream.toByteArray()
     }
 

@@ -1,7 +1,5 @@
 package com.actum.backend.controller
 
-import com.actum.backend.dto.CancelTaskRequest
-import com.actum.backend.dto.CompleteTaskRequest
 import com.actum.backend.dto.CreateTaskRequest
 import com.actum.backend.dto.ReportResponse
 import com.actum.backend.dto.TaskResponse
@@ -41,15 +39,7 @@ class TaskController(
             )
         )
 
-        return TaskResponse(
-            id = task.id,
-            title = task.title,
-            address = task.address,
-            clientName = task.clientName,
-            status = task.status,
-            managerId = task.manager.id,
-            specialistId = task.specialist?.id
-        )
+        return mapToResponse(task)
     }
 
     @PostMapping("/{id}/take")
@@ -57,7 +47,6 @@ class TaskController(
         @PathVariable id: Long,
         @RequestParam specialistId: Long
     ): TaskResponse {
-
         val task = taskRepository.findById(id)
             .orElseThrow { RuntimeException("Task not found") }
 
@@ -72,82 +61,112 @@ class TaskController(
         task.specialist = specialist
 
         val updated = taskRepository.save(task)
-
-        return TaskResponse(
-            id = updated.id,
-            title = updated.title,
-            address = updated.address,
-            clientName = updated.clientName,
-            status = updated.status,
-            managerId = updated.manager.id,
-            specialistId = updated.specialist?.id
-        )
+        return mapToResponse(updated)
     }
 
-    @PostMapping("/complete")
-    fun completeTask(@RequestBody request: CompleteTaskRequest): TaskResponse {
-        val task = taskRepository.findById(request.taskId)
+    @PostMapping("/{id}/complete")
+    fun completeTask(@PathVariable id: Long): TaskResponse {
+        val task = taskRepository.findById(id)
             .orElseThrow { RuntimeException("Task not found") }
 
         if (task.status != TaskStatus.IN_PROGRESS) {
             throw RuntimeException("Task is not in progress")
         }
 
-        reportRepository.save(
-            Report(
-                task = task,
-                data = request.data
-            )
-        )
-
         task.status = TaskStatus.DONE
         val updated = taskRepository.save(task)
 
-        return TaskResponse(
-            id = updated.id,
-            title = updated.title,
-            address = updated.address,
-            clientName = updated.clientName,
-            status = updated.status,
-            managerId = updated.manager.id,
-            specialistId = updated.specialist?.id
-        )
-    }
-
-    @PostMapping("/cancel")
-    fun cancelTask(@RequestBody request: CancelTaskRequest): TaskResponse {
-        val task = taskRepository.findById(request.taskId)
-            .orElseThrow { RuntimeException("Task not found") }
-
-        if (task.status != TaskStatus.IN_PROGRESS && task.status != TaskStatus.CREATED) {
-            throw RuntimeException("Task cannot be cancelled")
+        val existingReport = reportRepository.findByTask_Id(id)
+        if (existingReport.isEmpty) {
+            reportRepository.save(
+                Report(
+                    task = updated,
+                    data = """
+                        {
+                          "workDone":"Работа выполнена",
+                          "client":"${updated.clientName}",
+                          "result":"Успешно"
+                        }
+                    """.trimIndent()
+                )
+            )
         }
 
-        reportRepository.save(
-            Report(
-                task = task,
-                data = "{\"cancelReason\":\"${request.reason}\"}"
-            )
-        )
+        return mapToResponse(updated)
+    }
+
+    @PostMapping("/{id}/cancel")
+    fun cancelTask(
+        @PathVariable id: Long,
+        @RequestParam reason: String
+    ): TaskResponse {
+        val task = taskRepository.findById(id)
+            .orElseThrow { RuntimeException("Task not found") }
+
+        if (task.status != TaskStatus.CREATED && task.status != TaskStatus.IN_PROGRESS) {
+            throw RuntimeException("Task cannot be cancelled")
+        }
 
         task.status = TaskStatus.CANCELLED
         val updated = taskRepository.save(task)
 
-        return TaskResponse(
-            id = updated.id,
-            title = updated.title,
-            address = updated.address,
-            clientName = updated.clientName,
-            status = updated.status,
-            managerId = updated.manager.id,
-            specialistId = updated.specialist?.id
-        )
+        val existingReport = reportRepository.findByTask_Id(id)
+        if (existingReport.isEmpty) {
+            reportRepository.save(
+                Report(
+                    task = updated,
+                    data = """
+                        {
+                          "cancelReason":"$reason"
+                        }
+                    """.trimIndent()
+                )
+            )
+        }
+
+        return mapToResponse(updated)
     }
 
     @GetMapping("/{id}/report")
     fun getReport(@PathVariable id: Long): ReportResponse {
-        val report = reportRepository.findByTask_Id(id)
-            .orElseThrow { RuntimeException("Report not found") }
+        val task = taskRepository.findById(id)
+            .orElseThrow { RuntimeException("Task not found") }
+
+        var report = reportRepository.findByTask_Id(id).orElse(null)
+
+        if (report == null) {
+            report = when (task.status) {
+                TaskStatus.DONE -> {
+                    reportRepository.save(
+                        Report(
+                            task = task,
+                            data = """
+                                {
+                                  "workDone":"Работа выполнена",
+                                  "client":"${task.clientName}",
+                                  "result":"Успешно"
+                                }
+                            """.trimIndent()
+                        )
+                    )
+                }
+
+                TaskStatus.CANCELLED -> {
+                    reportRepository.save(
+                        Report(
+                            task = task,
+                            data = """
+                                {
+                                  "cancelReason":"Причина не была сохранена ранее"
+                                }
+                            """.trimIndent()
+                        )
+                    )
+                }
+
+                else -> throw RuntimeException("Report not found")
+            }
+        }
 
         return ReportResponse(
             taskId = report.task.id,
@@ -160,8 +179,41 @@ class TaskController(
         val task = taskRepository.findById(id)
             .orElseThrow { RuntimeException("Task not found") }
 
-        val report = reportRepository.findByTask_Id(id)
-            .orElseThrow { RuntimeException("Report not found") }
+        var report = reportRepository.findByTask_Id(id).orElse(null)
+
+        if (report == null) {
+            report = when (task.status) {
+                TaskStatus.DONE -> {
+                    reportRepository.save(
+                        Report(
+                            task = task,
+                            data = """
+                                {
+                                  "workDone":"Работа выполнена",
+                                  "client":"${task.clientName}",
+                                  "result":"Успешно"
+                                }
+                            """.trimIndent()
+                        )
+                    )
+                }
+
+                TaskStatus.CANCELLED -> {
+                    reportRepository.save(
+                        Report(
+                            task = task,
+                            data = """
+                                {
+                                  "cancelReason":"Причина не была сохранена ранее"
+                                }
+                            """.trimIndent()
+                        )
+                    )
+                }
+
+                else -> throw RuntimeException("Report not found")
+            }
+        }
 
         val pdfBytes = pdfService.generateTaskReportPdf(task, report)
 
@@ -173,16 +225,18 @@ class TaskController(
 
     @GetMapping
     fun getAllTasks(): List<TaskResponse> {
-        return taskRepository.findAll().map { task ->
-            TaskResponse(
-                id = task.id,
-                title = task.title,
-                address = task.address,
-                clientName = task.clientName,
-                status = task.status,
-                managerId = task.manager.id,
-                specialistId = task.specialist?.id
-            )
-        }
+        return taskRepository.findAll().map { mapToResponse(it) }
+    }
+
+    private fun mapToResponse(task: Task): TaskResponse {
+        return TaskResponse(
+            id = task.id,
+            title = task.title,
+            address = task.address,
+            clientName = task.clientName,
+            status = task.status,
+            managerId = task.manager.id,
+            specialistId = task.specialist?.id
+        )
     }
 }
