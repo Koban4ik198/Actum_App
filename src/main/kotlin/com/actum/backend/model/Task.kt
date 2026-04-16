@@ -16,6 +16,12 @@ data class Task(
 
     val clientName: String,
 
+    val clientPhone: String? = null,
+
+    val priority: String? = null,
+
+    val deadline: String? = null,
+
     @Enumerated(EnumType.STRING)
     var status: TaskStatus = TaskStatus.CREATED,
 

@@ -1,5 +1,6 @@
 package com.actum.backend.controller
 
+import com.actum.backend.dto.CompleteTaskRequest
 import com.actum.backend.dto.CreateTaskRequest
 import com.actum.backend.dto.ReportResponse
 import com.actum.backend.dto.TaskResponse
@@ -34,6 +35,9 @@ class TaskController(
                 title = request.title,
                 address = request.address,
                 clientName = request.clientName,
+                clientPhone = request.clientPhone,
+                priority = request.priority,
+                deadline = request.deadline,
                 status = TaskStatus.CREATED,
                 manager = manager
             )
@@ -64,9 +68,9 @@ class TaskController(
         return mapToResponse(updated)
     }
 
-    @PostMapping("/{id}/complete")
-    fun completeTask(@PathVariable id: Long): TaskResponse {
-        val task = taskRepository.findById(id)
+    @PostMapping("/complete")
+    fun completeTask(@RequestBody request: CompleteTaskRequest): TaskResponse {
+        val task = taskRepository.findById(request.taskId)
             .orElseThrow { RuntimeException("Task not found") }
 
         if (task.status != TaskStatus.IN_PROGRESS) {
@@ -76,21 +80,17 @@ class TaskController(
         task.status = TaskStatus.DONE
         val updated = taskRepository.save(task)
 
-        val existingReport = reportRepository.findByTask_Id(id)
-        if (existingReport.isEmpty) {
-            reportRepository.save(
-                Report(
-                    task = updated,
-                    data = """
-                        {
-                          "workDone":"Работа выполнена",
-                          "client":"${updated.clientName}",
-                          "result":"Успешно"
-                        }
-                    """.trimIndent()
-                )
-            )
+        val existingReport = reportRepository.findByTask_Id(request.taskId)
+        if (existingReport.isPresent) {
+            reportRepository.delete(existingReport.get())
         }
+
+        reportRepository.save(
+            Report(
+                task = updated,
+                data = request.data
+            )
+        )
 
         return mapToResponse(updated)
     }
@@ -234,6 +234,9 @@ class TaskController(
             title = task.title,
             address = task.address,
             clientName = task.clientName,
+            clientPhone = task.clientPhone,
+            priority = task.priority,
+            deadline = task.deadline,
             status = task.status,
             managerId = task.manager.id,
             specialistId = task.specialist?.id
