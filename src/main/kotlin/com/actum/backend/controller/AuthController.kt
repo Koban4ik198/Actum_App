@@ -23,6 +23,10 @@ class AuthController(
         }
 
         val token = jwtService.generateToken(user.login)
-        return LoginResponse(token)
+
+        return LoginResponse(
+            token = token,
+            role = user.role.name
+        )
     }
 }
