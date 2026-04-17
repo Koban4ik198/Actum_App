@@ -26,7 +26,9 @@ class AuthController(
 
         return LoginResponse(
             token = token,
-            role = user.role.name
+            role = user.role.name,
+            userId = user.id,
+            fullName = user.getFullName()
         )
     }
 }

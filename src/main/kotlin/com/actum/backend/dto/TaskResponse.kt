@@ -1,5 +1,7 @@
 package com.actum.backend.dto
 
+import com.actum.backend.model.TaskStatus
+
 data class TaskResponse(
     val id: Long,
     val title: String,
@@ -8,7 +10,9 @@ data class TaskResponse(
     val clientPhone: String?,
     val priority: String?,
     val deadline: String?,
-    val status: com.actum.backend.model.TaskStatus,
+    val status: TaskStatus,
     val managerId: Long,
-    val specialistId: Long?
+    val managerFullName: String,
+    val specialistId: Long?,
+    val specialistFullName: String?
 )

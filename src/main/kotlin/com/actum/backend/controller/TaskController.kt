@@ -239,7 +239,9 @@ class TaskController(
             deadline = task.deadline,
             status = task.status,
             managerId = task.manager.id,
-            specialistId = task.specialist?.id
+            managerFullName = task.manager.getFullName(),
+            specialistId = task.specialist?.id,
+            specialistFullName = task.specialist?.getFullName()
         )
     }
 }

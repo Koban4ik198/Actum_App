@@ -19,6 +19,9 @@ class DataLoader {
                 User(
                     login = "manager",
                     password = "1234",
+                    lastName = "Шиленко",
+                    firstName = "Кристина",
+                    middleName = "Александровна",
                     role = Role.MANAGER
                 )
             )
@@ -27,6 +30,9 @@ class DataLoader {
                 User(
                     login = "worker",
                     password = "1234",
+                    lastName = "Свиридов",
+                    firstName = "Борис",
+                    middleName = "Григорьевич",
                     role = Role.SPECIALIST
                 )
             )

@@ -15,6 +15,17 @@ data class User(
 
     val password: String,
 
+    val lastName: String,
+
+    val firstName: String,
+
+    val middleName: String? = null,
+
     @Enumerated(EnumType.STRING)
     val role: Role
-)
+) {
+    fun getFullName(): String {
+        return listOfNotNull(lastName, firstName, middleName)
+            .joinToString(" ")
+    }
+}
